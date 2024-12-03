@@ -20,13 +20,13 @@ end_time = pd.Timestamp.now().replace(hour=22, minute=30, second=0, microsecond=
 time_range = pd.date_range(start=start_time, end=end_time, freq="H")
 
 # Generate sample data
-def generate_device_data(device_name, actions, data_shared):
+def generate_device_data(device_name, actions, data_shared, source_ip):
     data = pd.DataFrame({
         "DateTime": time_range,
         "Action Type": np.random.choice(actions, size=len(time_range)),
         "Requests Sent": np.random.randint(50, 100, size=len(time_range)),
         "Requests Accepted": np.random.randint(40, 90, size=len(time_range)),
-        "Source IP": [f"192.168.{np.random.randint(0, 10)}.{i % 255}" for i in range(len(time_range))],
+        "Source IP": [source_ip] * len(time_range),
         "Node Source IP": [f"10.0.{np.random.randint(0, 10)}.{i % 255}" for i in range(len(time_range))],
         "Data Shared": np.random.choice(data_shared, size=len(time_range)),
         "Device": [device_name] * len(time_range),
@@ -37,14 +37,16 @@ def generate_device_data(device_name, actions, data_shared):
 echo_data = generate_device_data(
     "Amazon Echo",
     actions=["Play Music", "Turn On Light", "Check Weather", "Set Alarm", "Volume Up"],
-    data_shared=["Music Metadata", "Location", "None", "Alarm Time", "Volume Level"]
+    data_shared=["Music Metadata", "Location", "None", "Alarm Time", "Volume Level"],
+    source_ip="192.168.0.1"
 )
 
 # Google Nest Doorbell Data
 doorbell_data = generate_device_data(
     "Google Nest Doorbell",
     actions=["Packet Sent", "Stream Video", "Capture Snapshot", "Send Notification", "Idle"],
-    data_shared=["Video Feed", "Snapshot", "None", "Notification Details", "None"]
+    data_shared=["Video Feed", "Snapshot", "None", "Notification Details", "None"],
+    source_ip="192.168.1.1"
 )
 
 # Merge Data for All Devices
@@ -68,12 +70,12 @@ if selected_tab == "Device Reports":
     if device_selected == "Amazon Echo":
         st.subheader("Amazon Echo Details")
         st.dataframe(echo_data)
-        st.bar_chart(echo_data.groupby("DateTime")[["Requests Sent", "Requests Accepted", "Requests Failed"]].sum())
+        st.bar_chart(echo_data.groupby("DateTime")[["Requests Sent", "Requests Accepted"]].sum())
 
     elif device_selected == "Google Nest Doorbell":
         st.subheader("Google Nest Doorbell Details")
         st.dataframe(doorbell_data)
-        st.line_chart(doorbell_data.groupby("DateTime")[["Requests Sent", "Requests Accepted", "Requests Failed"]].sum())
+        st.line_chart(doorbell_data.groupby("DateTime")[["Requests Sent", "Requests Accepted"]].sum())
 
     # Policy Management Section
     st.header("Policy Management")
@@ -102,9 +104,9 @@ if selected_tab == "Device Reports":
     device_selected_viz = st.radio("Select a Device for Packet Analysis:", ["Amazon Echo", "Google Nest Doorbell"])
 
     if device_selected_viz == "Amazon Echo":
-        st.line_chart(echo_data.groupby("DateTime")[["Requests Sent", "Requests Accepted", "Requests Failed"]].sum())
+        st.line_chart(echo_data.groupby("DateTime")[["Requests Sent", "Requests Accepted"]].sum())
     elif device_selected_viz == "Google Nest Doorbell":
-        st.line_chart(doorbell_data.groupby("DateTime")[["Requests Sent", "Requests Accepted", "Requests Failed"]].sum())
+        st.line_chart(doorbell_data.groupby("DateTime")[["Requests Sent", "Requests Accepted"]].sum())
 
     # Footer Section
     st.write("Developed for secure, transparent smart device monitoring using Hyperledger Fabric.")
