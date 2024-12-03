@@ -30,7 +30,7 @@ end_time = pd.Timestamp.now().replace(hour=22, minute=30, second=0, microsecond=
 time_range = generate_random_time_range(start_time, end_time)
 
 # Generate sample data
-def generate_device_data(device_name, actions, data_shared, source_ip):
+def generate_device_data(device_name, actions, data_shared, source_ip, destination_ip_base):
     data = pd.DataFrame({
         "DateTime": time_range,
         "Action Type": np.random.choice(actions, size=len(time_range)),
@@ -38,6 +38,7 @@ def generate_device_data(device_name, actions, data_shared, source_ip):
         "Requests Accepted": np.random.randint(40, 90, size=len(time_range)),
         "Source IP": [source_ip] * len(time_range),
         "Node Source IP": [f"10.0.{np.random.randint(0, 10)}.{i % 255}" for i in range(len(time_range))],
+        "Destination IP": [f"{destination_ip_base}.{np.random.randint(1, 255)}" for _ in range(len(time_range))],
         "Data Shared": np.random.choice(data_shared, size=len(time_range)),
         "Device": [device_name] * len(time_range),
     })
@@ -48,7 +49,8 @@ echo_data = generate_device_data(
     "Amazon Echo",
     actions=["Play Music", "Turn On Light", "Check Weather", "Set Alarm", "Volume Up"],
     data_shared=["Music Metadata", "Location", "None", "Alarm Time", "Volume Level"],
-    source_ip="192.168.0.1"
+    source_ip="192.168.0.1",
+    destination_ip_base="192.168.100"
 )
 
 # Google Nest Doorbell Data
@@ -56,7 +58,8 @@ doorbell_data = generate_device_data(
     "Google Nest Doorbell",
     actions=["Packet Sent", "Stream Video", "Capture Snapshot", "Send Notification", "Idle"],
     data_shared=["Video Feed", "Snapshot", "None", "Notification Details", "None"],
-    source_ip="192.168.1.1"
+    source_ip="192.168.1.1",
+    destination_ip_base="192.168.200"
 )
 
 # Merge Data for All Devices
