@@ -19,13 +19,16 @@ start_time = pd.Timestamp("2024-11-26 00:00:00")
 end_time = pd.Timestamp.now().replace(hour=22, minute=30, second=0, microsecond=0)
 time_range = pd.date_range(start=start_time, end=end_time, freq="15T")
 
-# Function to generate realistic data
+# Function to generate realistic data with range validation
 def generate_device_data(device_name, total_packets, total_requests):
     size = len(time_range)
-    packets_sent = np.random.randint(10, total_packets // size, size)
-    packets_received = packets_sent - np.random.randint(0, 3, size)
-    requests_sent = np.random.randint(10, total_requests // size, size)
-    requests_received = requests_sent - np.random.randint(0, 2, size)
+    max_packets_per_interval = max(1, total_packets // size)
+    max_requests_per_interval = max(1, total_requests // size)
+
+    packets_sent = np.random.randint(1, max_packets_per_interval + 1, size)
+    packets_received = np.maximum(0, packets_sent - np.random.randint(0, 3, size))
+    requests_sent = np.random.randint(1, max_requests_per_interval + 1, size)
+    requests_received = np.maximum(0, requests_sent - np.random.randint(0, 2, size))
 
     return pd.DataFrame({
         "Time": time_range,
