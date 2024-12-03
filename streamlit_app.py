@@ -14,10 +14,20 @@ menu_options = [
 ]
 selected_tab = st.sidebar.radio("Navigation", menu_options, index=0)
 
-# Define the time range for hourly data
+# Generate random time intervals less than 30 minutes
+def generate_random_time_range(start_time, end_time):
+    current_time = start_time
+    time_list = []
+    while current_time < end_time:
+        time_list.append(current_time)
+        increment = pd.Timedelta(minutes=np.random.randint(1, 30))
+        current_time += increment
+    return pd.to_datetime(time_list)
+
+# Define the time range for random intervals
 start_time = pd.Timestamp("2024-11-26 00:00:00")  # Tuesday before Thanksgiving
 end_time = pd.Timestamp.now().replace(hour=22, minute=30, second=0, microsecond=0)
-time_range = pd.date_range(start=start_time, end=end_time, freq="H")
+time_range = generate_random_time_range(start_time, end_time)
 
 # Generate sample data
 def generate_device_data(device_name, actions, data_shared, source_ip):
