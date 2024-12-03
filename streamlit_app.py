@@ -26,7 +26,6 @@ def generate_device_data(device_name, actions, data_shared):
         "Action Type": np.random.choice(actions, size=len(time_range)),
         "Requests Sent": np.random.randint(50, 100, size=len(time_range)),
         "Requests Accepted": np.random.randint(40, 90, size=len(time_range)),
-        "Requests Failed": lambda x: x["Requests Sent"] - x["Requests Accepted"],
         "Source IP": [f"192.168.{np.random.randint(0, 10)}.{i % 255}" for i in range(len(time_range))],
         "Node Source IP": [f"10.0.{np.random.randint(0, 10)}.{i % 255}" for i in range(len(time_range))],
         "Data Shared": np.random.choice(data_shared, size=len(time_range)),
