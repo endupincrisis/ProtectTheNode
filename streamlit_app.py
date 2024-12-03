@@ -10,6 +10,6 @@ password = st.text_input("Password", type="password")
 if st.button("Login"):
     if username == "Stephanie" and password == "password2":  # Replace with your own logic
         st.success("Login successful!")
-        st.write("Welcome, admin!")  # Replace with your app's main content
+        st.write("Welcome Stephanie!")  # Replace with your app's main content
     else:
         st.error("Invalid username or password")
