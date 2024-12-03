@@ -14,117 +14,158 @@ menu_options = [
 ]
 selected_tab = st.sidebar.radio("Navigation", menu_options, index=0)
 
-# Generate random time intervals less than 30 minutes
-def generate_random_time_range(start_time, end_time):
-    current_time = start_time
-    time_list = []
-    while current_time < end_time:
-        time_list.append(current_time)
-        increment = pd.Timedelta(minutes=np.random.randint(1, 30))
-        current_time += increment
-    return pd.to_datetime(time_list)
-
-# Define the time range for random intervals
-start_time = pd.Timestamp("2024-11-26 00:00:00")  # Tuesday before Thanksgiving
+# Generate consistent data
+start_time = pd.Timestamp("2024-11-26 00:00:00")
 end_time = pd.Timestamp.now().replace(hour=22, minute=30, second=0, microsecond=0)
-time_range = generate_random_time_range(start_time, end_time)
+time_range = pd.date_range(start=start_time, end=end_time, freq="15T")
 
-# Generate sample data
-def generate_device_data(device_name, actions, data_shared, source_ip, destination_ip_base):
-    data = pd.DataFrame({
-        "DateTime": time_range,
-        "Action Type": np.random.choice(actions, size=len(time_range)),
-        "Requests Sent": np.random.randint(50, 100, size=len(time_range)),
-        "Requests Accepted": np.random.randint(40, 90, size=len(time_range)),
-        "Source IP": [source_ip] * len(time_range),
-        "Node Source IP": [f"10.0.{np.random.randint(0, 10)}.{i % 255}" for i in range(len(time_range))],
-        "Destination IP": [f"{destination_ip_base}.{np.random.randint(1, 255)}" for _ in range(len(time_range))],
-        "Data Shared": np.random.choice(data_shared, size=len(time_range)),
-        "Device": [device_name] * len(time_range),
+# Function to generate realistic data
+def generate_device_data(device_name, total_packets, total_requests):
+    size = len(time_range)
+    packets_sent = np.random.randint(10, total_packets // size, size)
+    packets_received = packets_sent - np.random.randint(0, 3, size)
+    requests_sent = np.random.randint(10, total_requests // size, size)
+    requests_received = requests_sent - np.random.randint(0, 2, size)
+
+    return pd.DataFrame({
+        "Time": time_range,
+        "Packets Sent": packets_sent,
+        "Packets Received": packets_received,
+        "Requests Sent": requests_sent,
+        "Requests Received": requests_received,
+        "Failures": requests_sent - requests_received,
+        "Device": [device_name] * size
     })
-    return data
 
-# Amazon Echo Data
-echo_data = generate_device_data(
-    "Amazon Echo",
-    actions=["Play Music", "Turn On Light", "Check Weather", "Set Alarm", "Volume Up"],
-    data_shared=["Music Metadata", "Location", "None", "Alarm Time", "Volume Level"],
-    source_ip="192.168.0.1",
-    destination_ip_base="192.168.100"
-)
+# Data for devices
+echo_total_packets = 20000
+echo_total_requests = 15000
+nest_total_packets = 10000
+nest_total_requests = 8000
 
-# Google Nest Doorbell Data
-doorbell_data = generate_device_data(
-    "Google Nest Doorbell",
-    actions=["Packet Sent", "Stream Video", "Capture Snapshot", "Send Notification", "Idle"],
-    data_shared=["Video Feed", "Snapshot", "None", "Notification Details", "None"],
-    source_ip="192.168.1.1",
-    destination_ip_base="192.168.200"
-)
+echo_data = generate_device_data("Amazon Echo", echo_total_packets, echo_total_requests)
+nest_data = generate_device_data("Google Nest Doorbell", nest_total_packets, nest_total_requests)
 
-# Merge Data for All Devices
-all_data = pd.concat([echo_data, doorbell_data])
+# Combine all data
+all_data = pd.concat([echo_data, nest_data])
 
-# Device Reports Tab
-if selected_tab == "Device Reports":
-    st.title("Smart Devices Blockchain Dashboard")
+# Wireshark Reports
+if selected_tab == "WireShark Reports":
+    st.title("Wireshark Reports")
+    st.header("Device Data Analysis")
 
-    # Overview Section
-    st.header("Overview")
-    st.metric("Total Devices", len(all_data["Device"].unique()))
-    st.metric("Total Packets Transmitted", all_data["Requests Sent"].sum())
-    st.metric("Filtered Packets", f"{np.random.randint(70, 90)}%")
-    st.metric("Unfiltered Packets", f"{np.random.randint(10, 30)}%")
-    st.metric("Active Policies", 15)
+    # Line/Curve Graphs
+    st.subheader("Line and Curve Graphs")
+    st.line_chart(echo_data[["Packets Sent", "Packets Received"]], height=250)
+    st.line_chart(echo_data[["Requests Sent", "Requests Received"]], height=250)
 
-    # Device-Specific Panels
-    device_selected = st.selectbox("Select a Device to View Details:", ["Amazon Echo", "Google Nest Doorbell"])
+    # Bar Chart of Sent to Received
+    st.subheader("Bar Chart: Sent vs. Received")
+    bar_data = echo_data[["Packets Sent", "Packets Received"]].sum()
+    st.bar_chart(bar_data)
 
-    if device_selected == "Amazon Echo":
-        st.subheader("Amazon Echo Details")
-        st.dataframe(echo_data)
-        st.bar_chart(echo_data.groupby("DateTime")[["Requests Sent", "Requests Accepted"]].sum())
-
-    elif device_selected == "Google Nest Doorbell":
-        st.subheader("Google Nest Doorbell Details")
-        st.dataframe(doorbell_data)
-        st.line_chart(doorbell_data.groupby("DateTime")[["Requests Sent", "Requests Accepted"]].sum())
-
-    # Policy Management Section
-    st.header("Policy Management")
-    st.write("Configure and manage data-sharing policies for connected devices.")
-
-    # Policy Configuration Table
-    policy_table = pd.DataFrame({
+    # Failures for Both Devices
+    st.subheader("Failures by Device")
+    failure_data = pd.DataFrame({
         "Device": ["Amazon Echo", "Google Nest Doorbell"],
-        "Active Policies": ["Encrypt Music Metadata", "Anonymize Video Feed"],
-        "Data Shared": ["Music Metadata", "Video Feed"],
-        "Policy Compliance": ["Yes", "Yes"],
+        "Failures": [echo_data["Failures"].sum(), nest_data["Failures"].sum()]
     })
-    st.table(policy_table)
+    st.bar_chart(failure_data.set_index("Device"))
 
-    # Alerts Section
-    st.header("Alerts")
-    alerts = [
-        "Amazon Echo: High request failure rate detected!",
-        "Google Nest Doorbell: Video feed data transmission unencrypted."
-    ]
-    for alert in alerts:
-        st.error(alert)
+# Test Case Reports
+elif selected_tab == "Test Case Reports":
+    st.title("Test Case Reports")
+    st.header("Amazon Echo Packet Timeline Analysis")
 
-    # Visualization Section
-    st.header("Packet Flow Analysis")
-    device_selected_viz = st.radio("Select a Device for Packet Analysis:", ["Amazon Echo", "Google Nest Doorbell"])
+    # Filter for Date
+    selected_date = st.date_input("Select Date", start_time.date())
+    filtered_data = echo_data[echo_data["Time"].dt.date == selected_date]
 
-    if device_selected_viz == "Amazon Echo":
-        st.line_chart(echo_data.groupby("DateTime")[["Requests Sent", "Requests Accepted"]].sum())
-    elif device_selected_viz == "Google Nest Doorbell":
-        st.line_chart(doorbell_data.groupby("DateTime")[["Requests Sent", "Requests Accepted"]].sum())
+    # Line Chart for Packets Over Time
+    if not filtered_data.empty:
+        st.line_chart(filtered_data[["Packets Sent", "Packets Received"]])
+    else:
+        st.write("No data available for the selected date.")
 
-    # Footer Section
-    st.write("Developed for secure, transparent smart device monitoring using Hyperledger Fabric.")
+    st.subheader("Test Cases")
+    test_cases = pd.DataFrame({
+        "Test Case": [
+            "Correct Song Plays",
+            "Restriction Block - Request Blocked by User",
+            "Echo - No Restrictions",
+            "Echo - With Rules Enforced",
+            "Data Sharing Across",
+            "Suggestion for Contract Rule to Have Uniformity",
+            "User Can Apply Smart Contract Rules",
+            "Admin Can View and Filter",
+            "Admin Creates Subuser",
+            "Admin Deletes"
+        ],
+        "Success Rate %": np.random.choice(range(0, 101, 20), 10)
+    })
+    st.bar_chart(test_cases.set_index("Test Case"))
 
-# Placeholder for other tabs
+# Ledger Report
+elif selected_tab == "Ledger Report":
+    st.title("Ledger Report")
+    st.header("Smart Contract Blocks")
+
+    # Buttons for Ledgers and Sidechains
+    sidechains = ["Main Blockchain", "Sidechain 1", "Sidechain 2"]
+    for chain in sidechains:
+        if st.button(f"View {chain}"):
+            st.write(f"Smart contract blocks for {chain} are displayed here.")
+
+# Users and Privileges
+elif selected_tab == "Users and Privileges":
+    st.title("Users and Privileges")
+    st.header("User Policies and Blocks")
+
+    user_privileges = pd.DataFrame({
+        "User": ["Stephanie", "Lucy"],
+        "Device": ["Amazon Echo", "Google Nest Doorbell"],
+        "Policy": ["Site Restriction: iTunes", "Time Restriction: Yoga Time"],
+        "Blocked Site/Time": ["iTunes", "3-5 PM"]
+    })
+    st.table(user_privileges)
+
+# Devices and Policies
+elif selected_tab == "Devices and Policies":
+    st.title("Devices and Policies")
+    st.header("Policy Management")
+
+    policy_data = pd.DataFrame({
+        "Device": ["Amazon Echo", "Google Nest Doorbell"],
+        "Available Policies": [
+            ["No Restriction", "Time Restriction", "Site Restriction", "Time Condition Restriction", "Music Genre Restriction"],
+            ["No Restriction", "Time Restriction", "Site Restriction"]
+        ]
+    })
+
+    # Show Policies
+    for index, row in policy_data.iterrows():
+        st.write(f"Device: {row['Device']}")
+        selected_policy = st.selectbox(f"Apply Policy to {row['Device']}", row["Available Policies"])
+        st.write(f"Selected Policy: {selected_policy}")
+
+    # Suggestion Box
+    st.text_area("Suggest a New Policy", placeholder="Enter your suggestion here.")
+
+# Device Reports
 else:
-    st.title(f"{selected_tab}")
-    st.write(f"Content for {selected_tab} will be added here.")
+    st.title("Device Reports")
+    st.header("Overall Device Metrics")
+
+    # Totals Table
+    device_totals = pd.DataFrame({
+        "Device": ["Amazon Echo", "Google Nest Doorbell"],
+        "Packets Sent": [echo_data["Packets Sent"].sum(), nest_data["Packets Sent"].sum()],
+        "Packets Received": [echo_data["Packets Received"].sum(), nest_data["Packets Received"].sum()],
+        "Requests Sent": [echo_data["Requests Sent"].sum(), nest_data["Requests Sent"].sum()],
+        "Requests Received": [echo_data["Requests Received"].sum(), nest_data["Requests Received"].sum()],
+        "Failures": [echo_data["Failures"].sum(), nest_data["Failures"].sum()]
+    })
+    st.table(device_totals)
+
+    st.subheader("Device Totals Breakdown")
+    st.bar_chart(device_totals.set_index("Device")[["Packets Sent", "Packets Received", "Requests Sent", "Requests Received"]])
