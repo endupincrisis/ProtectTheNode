@@ -10,7 +10,8 @@ menu_options = [
     "Test Case Reports",
     "Ledger Report",
     "Users and Privileges",
-    "Devices and Policies"
+    "Devices and Policies",
+    "Data Sharing"
 ]
 selected_tab = st.sidebar.radio("Navigation", menu_options, index=0)
 
@@ -52,110 +53,53 @@ nest_data = generate_device_data("Google Nest Doorbell", nest_total_packets, nes
 # Combine all data
 all_data = pd.concat([echo_data, nest_data])
 
-# Wireshark Reports
-if selected_tab == "WireShark Reports":
-    st.title("Wireshark Reports")
-    st.header("Device Data Analysis")
+# Data Sharing Page
+if selected_tab == "Data Sharing":
+    st.title("Data Sharing")
+    st.header("Restricted Sites and User Controls")
 
-    # Line/Curve Graphs
-    st.subheader("Line and Curve Graphs")
-    st.line_chart(echo_data[["Packets Sent", "Packets Received"]], height=250)
-    st.line_chart(echo_data[["Requests Sent", "Requests Received"]], height=250)
-
-    # Bar Chart of Sent to Received
-    st.subheader("Bar Chart: Sent vs. Received")
-    bar_data = echo_data[["Packets Sent", "Packets Received"]].sum()
-    st.bar_chart(bar_data)
-
-    # Failures for Both Devices
-    st.subheader("Failures by Device")
-    failure_data = pd.DataFrame({
-        "Device": ["Amazon Echo", "Google Nest Doorbell"],
-        "Failures": [echo_data["Failures"].sum(), nest_data["Failures"].sum()]
+    # Restricted Sites Table
+    restricted_sites = pd.DataFrame({
+        "User": ["Stephanie", "Lucy", "James"],
+        "Device": ["Amazon Echo", "Google Nest Doorbell", "Amazon Echo"],
+        "Restricted Site": ["iTunes", "YouTube", "Spotify"],
+        "Reason for Restriction": ["Explicit Content", "Work Hours Restriction", "Data Sharing Limit"]
     })
-    st.bar_chart(failure_data.set_index("Device"))
+    st.subheader("Restricted Sites")
+    st.table(restricted_sites)
 
-# Test Case Reports
-elif selected_tab == "Test Case Reports":
-    st.title("Test Case Reports")
-    st.header("Amazon Echo Packet Timeline Analysis")
-
-    # Filter for Date
-    selected_date = st.date_input("Select Date", start_time.date())
-    filtered_data = echo_data[echo_data["Time"].dt.date == selected_date]
-
-    # Line Chart for Packets Over Time
-    if not filtered_data.empty:
-        st.line_chart(filtered_data[["Packets Sent", "Packets Received"]])
-    else:
-        st.write("No data available for the selected date.")
-
-    st.subheader("Test Cases")
-    test_cases = pd.DataFrame({
-        "Test Case": [
-            "Correct Song Plays",
-            "Restriction Block - Request Blocked by User",
-            "Echo - No Restrictions",
-            "Echo - With Rules Enforced",
-            "Data Sharing Across",
-            "Suggestion for Contract Rule to Have Uniformity",
-            "User Can Apply Smart Contract Rules",
-            "Admin Can View and Filter",
-            "Admin Creates Subuser",
-            "Admin Deletes"
-        ],
-        "Success Rate %": np.random.choice(range(0, 101, 20), 10)
+    # Data Sharing Preferences
+    st.subheader("User Data Sharing Preferences")
+    properties = [
+        "Volume Control",
+        "Light Settings",
+        "Temperature",
+        "Door Lock Status",
+        "Camera Feed Access",
+        "Motion Detection Sensitivity",
+        "Device Location Sharing"
+    ]
+    data_sharing = pd.DataFrame({
+        "Property": properties,
+        "Frequency": np.random.choice(["Always", "Daily", "Weekly", "Never"], len(properties)),
+        "Allowed by User": np.random.choice(["Yes", "No"], len(properties))
     })
-    st.bar_chart(test_cases.set_index("Test Case"))
+    st.table(data_sharing)
 
-# Ledger Report
-elif selected_tab == "Ledger Report":
-    st.title("Ledger Report")
-    st.header("Smart Contract Blocks")
+    # User Customization
+    st.subheader("Customize Data Sharing Preferences")
+    for property in properties:
+        st.write(f"Control for {property}")
+        allowed = st.radio(f"Allow sharing of {property}?", ["Yes", "No"], key=property)
+        frequency = st.selectbox(
+            f"Set frequency for sharing {property}",
+            ["Always", "Daily", "Weekly", "Never"],
+            key=f"{property}_freq"
+        )
+        st.write(f"Your choice: Sharing {property} - {allowed}, Frequency - {frequency}")
 
-    # Buttons for Ledgers and Sidechains
-    sidechains = ["Main Blockchain", "Sidechain 1", "Sidechain 2"]
-    for chain in sidechains:
-        if st.button(f"View {chain}"):
-            st.write(f"Smart contract blocks for {chain} are displayed here.")
-
-# Users and Privileges
-elif selected_tab == "Users and Privileges":
-    st.title("Users and Privileges")
-    st.header("User Policies and Blocks")
-
-    user_privileges = pd.DataFrame({
-        "User": ["Stephanie", "Lucy"],
-        "Device": ["Amazon Echo", "Google Nest Doorbell"],
-        "Policy": ["Site Restriction: iTunes", "Time Restriction: Yoga Time"],
-        "Blocked Site/Time": ["iTunes", "3-5 PM"]
-    })
-    st.table(user_privileges)
-
-# Devices and Policies
-elif selected_tab == "Devices and Policies":
-    st.title("Devices and Policies")
-    st.header("Policy Management")
-
-    policy_data = pd.DataFrame({
-        "Device": ["Amazon Echo", "Google Nest Doorbell"],
-        "Available Policies": [
-            ["No Restriction", "Time Restriction", "Site Restriction", "Time Condition Restriction", "Music Genre Restriction"],
-            ["No Restriction", "Time Restriction", "Site Restriction"]
-        ]
-    })
-
-    # Show Policies
-    for index, row in policy_data.iterrows():
-        st.write(f"Device: {row['Device']}")
-        selected_policy = st.selectbox(f"Apply Policy to {row['Device']}", row["Available Policies"])
-        st.write(f"Selected Policy: {selected_policy}")
-
-    # Suggestion Box
-    st.text_area("Suggest a New Policy", placeholder="Enter your suggestion here.")
-
-# Device Reports
-else:
+# Other Pages (Device Reports, WireShark, etc.)
+elif selected_tab == "Device Reports":
     st.title("Device Reports")
     st.header("Overall Device Metrics")
 
@@ -172,3 +116,8 @@ else:
 
     st.subheader("Device Totals Breakdown")
     st.bar_chart(device_totals.set_index("Device")[["Packets Sent", "Packets Received", "Requests Sent", "Requests Received"]])
+
+# Placeholder for other pages
+else:
+    st.title(f"{selected_tab}")
+    st.write(f"Content for {selected_tab} will be added here.")
